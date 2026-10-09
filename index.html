@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="PayCalc" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>PayCalc</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#111827; --muted:#94a3b8; --text:#f8fafc;
+      --border:#263244; --accent:#22c55e; --accent2:#16a34a; --danger:#ef4444;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+    body{min-height:100vh;padding:env(safe-area-inset-top) 14px env(safe-area-inset-bottom)}
+    .wrap{max-width:720px;margin:0 auto;padding:18px 0 30px}
+    h1{font-size:28px;margin:8px 0 4px}
+    .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;margin-bottom:14px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:560px){.grid{grid-template-columns:1fr 1fr}}
+    label{display:block;font-size:13px;color:#dbeafe}
+    input,select{
+      width:100%;margin-top:7px;padding:13px 12px;border-radius:12px;
+      border:1px solid var(--border);background:#0f172a;color:var(--text);
+      font-size:16px;outline:none;
+    }
+    input:focus,select:focus{border-color:var(--accent)}
+    .hero{padding:18px}
+    .netlabel{color:var(--muted);font-size:14px}
+    .net{font-size:42px;font-weight:800;margin:4px 0 8px}
+    .bar{height:11px;background:#263244;border-radius:999px;overflow:hidden}
+    .bar>div{height:100%;width:0;background:var(--accent)}
+    .row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid rgba(148,163,184,.12)}
+    .row:last-child{border-bottom:0}
+    .row span:first-child{color:var(--muted)}
+    .total{font-weight:700}
+    .actions{display:flex;gap:10px}
+    button{
+      flex:1;padding:13px;border:0;border-radius:12px;font-size:15px;font-weight:700;
+      background:var(--accent);color:#052e16;
+    }
+    button.secondary{background:#1f2937;color:var(--text);border:1px solid var(--border)}
+    .note{font-size:12px;color:var(--muted);line-height:1.45}
+    .error{color:#fecaca;font-size:13px;margin-top:10px}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>PayCalc</h1>
+    <div class="sub">Estimate your paycheck from hours worked, overtime, taxes, and deductions.</div>
+
+    <section class="card">
+      <div class="grid">
+        <label>Hourly rate
+          <input id="rate" type="number" min="0" step="0.01" value="23.00">
+        </label>
+        <label>Regular hours
+          <input id="hours" type="number" min="0" step="0.25" value="40">
+        </label>
+        <label>Overtime hours
+          <input id="otHours" type="number" min="0" step="0.25" value="0">
+        </label>
+        <label>OT multiplier
+          <select id="otMult">
+            <option value="1.5" selected>1.5×</option>
+            <option value="2">2×</option>
+            <option value="1">1×</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="grid">
+        <label>Federal withholding %
+          <input id="fed" type="number" min="0" max="100" step="0.1" value="10">
+        </label>
+        <label>NY State withholding %
+          <input id="state" type="number" min="0" max="100" step="0.1" value="5">
+        </label>
+        <label>Social Security %
+          <input id="ss" type="number" min="0" max="100" step="0.01" value="6.2">
+        </label>
+        <label>Medicare %
+          <input id="med" type="number" min="0" max="100" step="0.01" value="1.45">
+        </label>
+        <label>Other withholding %
+          <input id="otherPct" type="number" min="0" max="100" step="0.1" value="0">
+        </label>
+        <label>Fixed deductions $
+          <input id="fixed" type="number" min="0" step="0.01" value="0">
+        </label>
+      </div>
+    </section>
+
+    <section class="card hero">
+      <div class="netlabel">Estimated take-home pay</div>
+      <div id="net" class="net">$0.00</div>
+      <div class="bar"><div id="netBar"></div></div>
+      <div class="row"><span>Gross pay</span><strong id="gross">$0.00</strong></div>
+      <div class="row"><span>Total taken out</span><strong id="totalDed">$0.00</strong></div>
+      <div class="row total"><span>You keep</span><strong id="keepPct">0%</strong></div>
+    </section>
+
+    <section class="card">
+      <div class="row"><span>Regular pay</span><span id="regularPay">$0.00</span></div>
+      <div class="row"><span>Overtime pay</span><span id="otPay">$0.00</span></div>
+      <div class="row"><span>Federal</span><span id="fedAmt">$0.00</span></div>
+      <div class="row"><span>New York State</span><span id="stateAmt">$0.00</span></div>
+      <div class="row"><span>Social Security</span><span id="ssAmt">$0.00</span></div>
+      <div class="row"><span>Medicare</span><span id="medAmt">$0.00</span></div>
+      <div class="row"><span>Other</span><span id="otherAmt">$0.00</span></div>
+      <div class="row"><span>Fixed deductions</span><span id="fixedAmt">$0.00</span></div>
+    </section>
+
+    <section class="card">
+      <div class="actions">
+        <button id="save">Save settings</button>
+        <button id="reset" class="secondary">Reset</button>
+      </div>
+      <div id="msg" class="error"></div>
+      <p class="note">This is an estimate. Federal and New York withholding vary by filing status, W-4/IT-2104 elections, pay frequency, credits, and pre-tax deductions.</p>
+    </section>
+  </main>
+
+  <script>
+    const ids=['rate','hours','otHours','otMult','fed','state','ss','med','otherPct','fixed'];
+    const $=id=>document.getElementById(id);
+    const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number.isFinite(n)?n:0);
+    const val=id=>{const n=parseFloat($(id).value); return Number.isFinite(n)?Math.max(0,n):0};
+
+    function calc(){
+      const rate=val('rate'), hrs=val('hours'), oth=val('otHours'), mult=val('otMult');
+      const regular=rate*hrs, overtime=rate*mult*oth, gross=regular+overtime;
+      const pct=id=>Math.min(val(id),100)/100;
+      const fed=gross*pct('fed'), state=gross*pct('state'), ss=gross*pct('ss'),
+            med=gross*pct('med'), other=gross*pct('otherPct'), fixed=val('fixed');
+      const deductions=fed+state+ss+med+other+fixed;
+      const net=Math.max(0,gross-deductions);
+      const keep=gross?Math.max(0,Math.min(100,net/gross*100)):0;
+
+      $('regularPay').textContent=money(regular);
+      $('otPay').textContent=money(overtime);
+      $('gross').textContent=money(gross);
+      $('fedAmt').textContent=money(fed);
+      $('stateAmt').textContent=money(state);
+      $('ssAmt').textContent=money(ss);
+      $('medAmt').textContent=money(med);
+      $('otherAmt').textContent=money(other);
+      $('fixedAmt').textContent=money(fixed);
+      $('totalDed').textContent=money(deductions);
+      $('net').textContent=money(net);
+      $('keepPct').textContent=keep.toFixed(1)+'%';
+      $('netBar').style.width=keep+'%';
+      $('msg').textContent=deductions>gross && gross>0?'Deductions exceed gross pay. Check your entries.':'';
+    }
+
+    ids.forEach(id=>{
+      $(id).addEventListener('input',calc);
+      $(id).addEventListener('change',calc);
+    });
+
+    $('save').addEventListener('click',()=>{
+      const data={}; ids.forEach(id=>data[id]=$(id).value);
+      localStorage.setItem('paycalc-settings',JSON.stringify(data));
+      $('msg').style.color='#bbf7d0';
+      $('msg').textContent='Settings saved on this device.';
+      setTimeout(()=>{$('msg').textContent='';$('msg').style.color=''},1600);
+    });
+
+    $('reset').addEventListener('click',()=>{
+      localStorage.removeItem('paycalc-settings');
+      const defaults={rate:'23.00',hours:'40',otHours:'0',otMult:'1.5',fed:'10',state:'5',ss:'6.2',med:'1.45',otherPct:'0',fixed:'0'};
+      ids.forEach(id=>$(id).value=defaults[id]);
+      calc();
+    });
+
+    try{
+      const saved=JSON.parse(localStorage.getItem('paycalc-settings')||'null');
+      if(saved) ids.forEach(id=>{if(saved[id]!=null) $(id).value=saved[id]});
+    }catch(e){}
+
+    calc();
+    if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  </script>
+</body>
+</html>
