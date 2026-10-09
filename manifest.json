@@ -1,9 +1,10 @@
 {
-  "name": "PayCalc - Paycheck Calculator",
+  "name": "PayCalc - Personalized Paycheck Estimator",
   "short_name": "PayCalc",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#0b1220",
+  "background_color": "#0a1020",
   "theme_color": "#111827",
   "icons": [
     {
